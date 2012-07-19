@@ -1118,6 +1118,15 @@ class RelationTest < ActiveRecord::TestCase
     end
   end
 
+  def test_nested_condition_on_included_association
+    posts = Post.includes(:comments).where("comments.id" => comments(:more_greetings).id)
+    post = posts.first
+
+    # both comments belong to the post, so they should be included in post.comments
+    assert_equal(comments(:greetings).post_id, comments(:more_greetings).post_id)
+    assert(post.comments.include?(comments(:greetings)))
+  end
+
   def test_ordering_with_extra_spaces
     assert_equal authors(:david), Author.order('id DESC , name DESC').last
   end
