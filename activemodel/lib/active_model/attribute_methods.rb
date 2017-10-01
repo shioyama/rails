@@ -69,6 +69,7 @@ module ActiveModel
     CALL_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?]?\z/
 
     included do
+      class_attribute :attribute_aliases, instance_writer: false, default: {}
       include ClassMethods::AttributeMethodMatcher.new
     end
 
@@ -205,6 +206,7 @@ module ActiveModel
       #   person.name_short?     # => true
       #   person.nickname_short? # => true
       def alias_attribute(new_name, old_name)
+        self.attribute_aliases = attribute_aliases.merge(new_name.to_s => old_name.to_s)
         ancestors.each do |ancestor|
           ancestor.alias_attribute(new_name, old_name) if ancestor.is_a?(AttributeMethodMatcher)
         end
@@ -246,7 +248,7 @@ module ActiveModel
       #   end
       def define_attribute_methods(*attr_names)
         ancestors.each do |ancestor|
-          ancestor.define_attribute_methods(*attr_names.flatten) if ancestor.is_a?(AttributeMethodMatcher)
+          ancestor.define_attribute_methods(*(attr_names.flatten)) if ancestor.is_a?(AttributeMethodMatcher)
         end
       end
 
