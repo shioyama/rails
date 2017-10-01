@@ -65,9 +65,6 @@ module ActiveModel
   module AttributeMethods
     extend ActiveSupport::Concern
 
-    NAME_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?=]?\z/
-    CALL_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?]?\z/
-
     included do
       class_attribute :attribute_aliases, instance_writer: false, default: {}
       include AttributeMethodMatcher.new
