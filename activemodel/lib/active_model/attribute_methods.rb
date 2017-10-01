@@ -102,6 +102,7 @@ module ActiveModel
       #   person.name          # => nil
       def attribute_method_prefix(*prefixes)
         prefixes.each { |prefix| include AttributeMethodMatcher.new prefix: prefix }
+        undefine_attribute_methods
       end
 
       # Declares a method available for all attributes with the given suffix.
@@ -136,6 +137,7 @@ module ActiveModel
       #   person.name_short?   # => true
       def attribute_method_suffix(*suffixes)
         suffixes.each { |suffix| include AttributeMethodMatcher.new suffix: suffix }
+        undefine_attribute_methods
       end
 
       # Declares a method available for all attributes with the given prefix
@@ -171,6 +173,7 @@ module ActiveModel
       #   person.name                         # => 'Default Name'
       def attribute_method_affix(*affixes)
         affixes.each { |affix| include AttributeMethodMatcher.new prefix: affix[:prefix], suffix: affix[:suffix] }
+        undefine_attribute_methods
       end
 
       # Allows you to make aliases for attributes.
@@ -343,7 +346,7 @@ module ActiveModel
           def match(method_name)
             matchers_cache.compute_if_absent(method_name) do
               if (@regex =~ method_name) && (method_name != :attributes)
-                AttributeMethodMatch.new(method_missing_target, $1, method_name)
+                AttributeMethodMatch.new(method_missing_target, $1, method_name.to_s)
               end
             end
           end
