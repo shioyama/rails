@@ -316,6 +316,10 @@ module ActiveModel
             define_method_missing
           end
 
+          def inspect
+            "<#{self.class.name}: #{@regex.inspect}>"
+          end
+
           def define_attribute_methods(*attr_names)
             handler = @method_missing_target
             attr_names.each do |attr_name|
@@ -326,7 +330,7 @@ module ActiveModel
           end
 
           def undefine_attribute_methods
-            #TODO: implement
+            (instance_methods - [:method_missing]).each(&method(:undef_method))
           end
 
           def alias_attribute(new_name, old_name)
@@ -338,9 +342,8 @@ module ActiveModel
 
           def match(method_name)
             matchers_cache.compute_if_absent(method_name) do
-              if (matches = @regex.match(method_name)) && (method_name != :attributes) && respond_to?(:attributes)
-                attr_name = (attributes.keys & matches.captures).first
-                AttributeMethodMatch.new(method_missing_target, attr_name, method_name)
+              if (@regex =~ method_name) && (method_name != :attributes)
+                AttributeMethodMatch.new(method_missing_target, $1, method_name)
               end
             end
           end
@@ -351,7 +354,7 @@ module ActiveModel
             matcher = self
 
             define_method :method_missing do |method_name, *arguments, &method_block|
-              if match = matcher.match(method_name)
+              if (match = matcher.match(method_name)) && attribute_method?(match.attr_name)
                 attribute_missing(match, *arguments, &method_block)
               else
                 super(method_name, *arguments, &method_block)
@@ -381,7 +384,13 @@ module ActiveModel
       __send__(match.target, match.attr_name, *args, &block)
     end
 
+    alias :respond_to_without_attributes? :respond_to?
+
     private
+      def attribute_method?(attr_name)
+        respond_to_without_attributes?(:attributes) && attributes.include?(attr_name)
+      end
+
       def missing_attribute(attr_name, stack)
         raise ActiveModel::MissingAttributeError, "missing attribute: #{attr_name}", stack
       end
