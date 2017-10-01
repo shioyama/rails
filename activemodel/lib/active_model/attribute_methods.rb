@@ -68,6 +68,10 @@ module ActiveModel
     NAME_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?=]?\z/
     CALL_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?]?\z/
 
+    included do
+      include ClassMethods::AttributeMethodMatcher.new
+    end
+
     module ClassMethods
       # Declares a method available for all attributes with the given prefix.
       # Uses +method_missing+ and <tt>respond_to?</tt> to rewrite the method.
@@ -242,7 +246,7 @@ module ActiveModel
       #   end
       def define_attribute_methods(*attr_names)
         ancestors.each do |ancestor|
-          ancestor.define_attribute_methods(*attr_names) if ancestor.is_a?(AttributeMethodMatcher)
+          ancestor.define_attribute_methods(*attr_names.flatten) if ancestor.is_a?(AttributeMethodMatcher)
         end
       end
 
@@ -326,9 +330,10 @@ module ActiveModel
           def define_attribute_methods(*attr_names)
             handler = @method_missing_target
             attr_names.each do |attr_name|
-              define_method method_name(attr_name) do |*arguments, &block|
+              name = method_name(attr_name)
+              define_method name do |*arguments, &block|
                 send(handler, attr_name, *arguments, &block)
-              end
+              end unless method_defined?(name)
             end
           end
 
@@ -357,15 +362,13 @@ module ActiveModel
             matcher = self
 
             define_method :method_missing do |method_name, *arguments, &method_block|
-              if (match = matcher.match(method_name)) && attribute_method?(match.attr_name)
+              if (match = matcher.match(method_name)) &&
+                  attribute_method?(match.attr_name) &&
+                  !respond_to?(method_name, true)
                 attribute_missing(match, *arguments, &method_block)
               else
                 super(method_name, *arguments, &method_block)
               end
-            end
-
-            define_method :respond_to_missing? do |method_name, include_private = false|
-              matcher.match(method_name) || super(method_name, include_private)
             end
           end
 
