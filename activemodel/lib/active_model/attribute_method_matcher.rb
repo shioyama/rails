@@ -4,8 +4,10 @@ require "concurrent/map"
 
 module ActiveModel
   class AttributeMethodMatcher < Module #:nodoc:
-    attr_reader :prefix, :suffix, :method_missing_target
+    NAME_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?=]?\z/
+    CALL_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?]?\z/
 
+    attr_reader :prefix, :suffix, :method_missing_target
     AttributeMethodMatch = Struct.new(:target, :attr_name, :method_name)
 
     def initialize(options = {})
@@ -24,9 +26,9 @@ module ActiveModel
       handler = @method_missing_target
       attr_names.each do |attr_name|
         name = method_name(attr_name)
-        define_method name do |*arguments, &block|
-          send(handler, attr_name, *arguments, &block)
-        end unless method_defined?(name)
+        unless method_defined?(name)
+          define_proxy_call true, name, handler, attr_name.to_s
+        end
       end
     end
 
@@ -35,10 +37,7 @@ module ActiveModel
     end
 
     def alias_attribute(new_name, old_name)
-      handler = method_name(old_name)
-      define_method method_name(new_name) do |*arguments, &block|
-        send(handler, *arguments, &block)
-      end
+      define_proxy_call false, method_name(new_name), method_name(old_name)
     end
 
     def match(method_name)
@@ -71,6 +70,28 @@ module ActiveModel
 
     def method_name(attr_name)
       @method_name % attr_name
+    end
+
+    def define_proxy_call(include_private, name, send, *extra)
+      defn = if NAME_COMPILABLE_REGEXP.match?(name)
+        "def #{name}(*args)"
+      else
+        "define_method(:'#{name}') do |*args|"
+      end
+
+      extra = (extra.map!(&:inspect) << "*args").join(", ".freeze)
+
+      target = if CALL_COMPILABLE_REGEXP.match?(send)
+        "#{"self." unless include_private}#{send}(#{extra})"
+      else
+        "send(:'#{send}', #{extra})"
+      end
+
+      module_eval <<-RUBY, __FILE__, __LINE__ + 1
+        #{defn}
+          #{target}
+        end
+      RUBY
     end
   end
 end
