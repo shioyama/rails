@@ -306,30 +306,6 @@ module ActiveModel
           ancestor.undefine_attribute_methods if ancestor.is_a? AttributeMethodMatcher
         end
       end
-
     end
-
-    # +attribute_missing+ is like +method_missing+, but for attributes. When
-    # +method_missing+ is called we check to see if there is a matching
-    # attribute method. If so, we tell +attribute_missing+ to dispatch the
-    # attribute. This method can be overloaded to customize the behavior.
-    def attribute_missing(match, *args, &block)
-      __send__(match.target, match.attr_name, *args, &block)
-    end
-
-    alias :respond_to_without_attributes? :respond_to?
-
-    private
-      def attribute_method?(attr_name)
-        respond_to_without_attributes?(:attributes) && attributes.include?(attr_name)
-      end
-
-      def missing_attribute(attr_name, stack)
-        raise ActiveModel::MissingAttributeError, "missing attribute: #{attr_name}", stack
-      end
-
-      def _read_attribute(attr)
-        __send__(attr)
-      end
   end
 end
