@@ -3,7 +3,7 @@
 require "concurrent/map"
 
 module ActiveModel
-  class AttributeMethodMatcher < Module #:nodoc:
+  class AttributeMethodMatcher < Module
     NAME_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?=]?\z/
     CALL_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?]?\z/
 
@@ -27,12 +27,13 @@ module ActiveModel
     end
 
     def define_attribute_methods(*attr_names)
-      handler = @method_missing_target
-      attr_names.each do |attr_name|
-        name = method_name(attr_name)
-        unless method_defined?(name)
-          define_proxy_call true, name, handler, attr_name.to_s
-        end
+      attr_names.each { |attr_name| define_attribute_method(attr_name) }
+    end
+
+    def define_attribute_method(attr_name)
+      name = method_name(attr_name)
+      unless instance_method_already_implemented?(name)
+        define_proxy_call true, name, @method_missing_target, attr_name.to_s
       end
     end
 
@@ -50,6 +51,10 @@ module ActiveModel
           AttributeMethodMatch.new(method_missing_target, $1, method_name.to_s)
         end
       end
+    end
+
+    def instance_method_already_implemented?(method_name)
+      method_defined?(method_name)
     end
 
     private

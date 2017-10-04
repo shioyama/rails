@@ -69,6 +69,10 @@ module ActiveModel
     end
 
     module ClassMethods
+      def attribute_method_matcher_class
+        ActiveModel::AttributeMethodMatcher
+      end
+
       # Declares a method available for all attributes with the given prefix.
       # Uses +method_missing+ and <tt>respond_to?</tt> to rewrite the method.
       #
@@ -101,7 +105,7 @@ module ActiveModel
       #   person.clear_name
       #   person.name          # => nil
       def attribute_method_prefix(*prefixes)
-        prefixes.each { |prefix| include AttributeMethodMatcher.new prefix: prefix }
+        prefixes.each { |prefix| include attribute_method_matcher_class.new prefix: prefix }
         undefine_attribute_methods
       end
 
@@ -136,7 +140,7 @@ module ActiveModel
       #   person.name          # => "Bob"
       #   person.name_short?   # => true
       def attribute_method_suffix(*suffixes)
-        suffixes.each { |suffix| include AttributeMethodMatcher.new suffix: suffix }
+        suffixes.each { |suffix| include attribute_method_matcher_class.new suffix: suffix }
         undefine_attribute_methods
       end
 
@@ -172,7 +176,7 @@ module ActiveModel
       #   person.reset_name_to_default!
       #   person.name                         # => 'Default Name'
       def attribute_method_affix(*affixes)
-        affixes.each { |affix| include AttributeMethodMatcher.new prefix: affix[:prefix], suffix: affix[:suffix] }
+        affixes.each { |affix| include attribute_method_matcher_class.new prefix: affix[:prefix], suffix: affix[:suffix] }
         undefine_attribute_methods
       end
 
@@ -203,7 +207,7 @@ module ActiveModel
       def alias_attribute(new_name, old_name)
         self.attribute_aliases = attribute_aliases.merge(new_name.to_s => old_name.to_s)
         ancestors.each do |ancestor|
-          ancestor.alias_attribute(new_name, old_name) if ancestor.is_a?(AttributeMethodMatcher)
+          ancestor.alias_attribute(new_name, old_name) if ancestor.is_a?(attribute_method_matcher_class)
         end
       end
 
@@ -243,7 +247,7 @@ module ActiveModel
       #   end
       def define_attribute_methods(*attr_names)
         ancestors.each do |ancestor|
-          ancestor.define_attribute_methods(*(attr_names.flatten)) if ancestor.is_a?(AttributeMethodMatcher)
+          ancestor.define_attribute_methods(*(attr_names.flatten)) if ancestor.is_a? attribute_method_matcher_class
         end
       end
 
@@ -303,7 +307,7 @@ module ActiveModel
       #   person.name_short? # => NoMethodError
       def undefine_attribute_methods
         ancestors.each do |ancestor|
-          ancestor.undefine_attribute_methods if ancestor.is_a? AttributeMethodMatcher
+          ancestor.undefine_attribute_methods if ancestor.is_a? attribute_method_matcher_class
         end
       end
     end
