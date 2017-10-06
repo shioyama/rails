@@ -1,0 +1,91 @@
+# frozen_string_literal: true
+
+require "mutex_m"
+
+module ActiveRecord
+  class AttributeMethodMatcher < ActiveModel::AttributeMethodMatcher
+    include Mutex_m
+
+    def initialize(*)
+      super
+      @attribute_methods_generated = false
+    end
+
+    # Generates all the attribute related methods for columns in the database
+    # accessors, mutators and query methods.
+    def define_attribute_methods(*attr_names)
+      return false if @attribute_methods_generated
+      # Use a mutex; we don't want two threads simultaneously trying to define
+      # attribute methods.
+      synchronize do
+        return false if @attribute_methods_generated
+        #model_class.superclass.define_attribute_methods unless model_class == model_class.base_class
+        super(*attr_names)
+        @attribute_methods_generated = true
+      end
+    end
+
+    def undefine_attribute_methods # :nodoc:
+      synchronize do
+        super if defined?(@attribute_methods_generated) && @attribute_methods_generated
+        @attribute_methods_generated = false
+      end
+    end
+
+    private
+
+    # We want to generate the methods via module_eval rather than
+    # define_method, because define_method is slower on dispatch.
+    # Evaluating many similar methods may use more memory as the instruction
+    # sequences are duplicated and cached (in MRI).  define_method may
+    # be slower on dispatch, but if you're careful about the closure
+    # created, then define_method will consume much less memory.
+    #
+    # But sometimes the database might return columns with
+    # characters that are not allowed in normal method names (like
+    # 'my_column(omg)'. So to work around this we first define with
+    # the __temp__ identifier, and then use alias method to rename
+    # it to what we want.
+    #
+    # We are also defining a constant to hold the frozen string of
+    # the attribute name. Using a constant means that we do not have
+    # to allocate an object on each call to the attribute method.
+    # Making it frozen means that it doesn't get duped when used to
+    # key the @attributes in read_attribute.
+    def define_method_attribute(name)
+      safe_name = name.unpack("h*".freeze).first
+      temp_method = "__temp__#{safe_name}"
+
+      ActiveRecord::AttributeMethods::AttrNames.set_name_cache safe_name, name
+      #sync_with_transaction_state = ""
+
+      module_eval <<-STR, __FILE__, __LINE__ + 1
+        def #{temp_method}
+          #sync_with_transaction_state if #{name.inspect} == self.class.primary_key
+          name = ::ActiveRecord::AttributeMethods::AttrNames::ATTR_#{safe_name}
+          _read_attribute(name) { |n| missing_attribute(n, caller) }
+        end
+      STR
+
+      alias_method name, temp_method
+      undef_method temp_method
+    end
+
+    def define_method_attribute=(name)
+      safe_name = name.unpack("h*".freeze).first
+      ActiveRecord::AttributeMethods::AttrNames.set_name_cache safe_name, name
+      #sync_with_transaction_state = "sync_with_transaction_state" if name == model_class.primary_key
+      #sync_with_transaction_state = ""
+
+      module_eval <<-STR, __FILE__, __LINE__ + 1
+        def __temp__#{safe_name}=(value)
+          name = ::ActiveRecord::AttributeMethods::AttrNames::ATTR_#{safe_name}
+          #sync_with_transaction_state if #{name.inspect} == self.class.primary_key
+          _write_attribute(name, value)
+        end
+        alias_method #{(name + '=').inspect}, :__temp__#{safe_name}=
+        undef_method :__temp__#{safe_name}=
+      STR
+    end
+  end
+end

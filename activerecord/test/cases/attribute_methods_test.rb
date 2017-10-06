@@ -19,14 +19,14 @@ class AttributeMethodsTest < ActiveRecord::TestCase
   fixtures :topics, :developers, :companies, :computers
 
   def setup
-    @old_matchers = ActiveRecord::Base.send(:attribute_method_matchers).dup
+#    @old_matchers = ActiveRecord::Base.send(:attribute_method_matchers).dup
     @target = Class.new(ActiveRecord::Base)
     @target.table_name = "topics"
   end
 
   teardown do
-    ActiveRecord::Base.send(:attribute_method_matchers).clear
-    ActiveRecord::Base.send(:attribute_method_matchers).concat(@old_matchers)
+#    ActiveRecord::Base.send(:attribute_method_matchers).clear
+#    ActiveRecord::Base.send(:attribute_method_matchers).concat(@old_matchers)
   end
 
   test "attribute_for_inspect with a string" do
@@ -1007,7 +1007,7 @@ class AttributeMethodsTest < ActiveRecord::TestCase
         class_eval(&block)
       end
 
-      assert_empty klass.send(:generated_attribute_methods).instance_methods(false)
+#      assert_empty klass.send(:generated_attribute_methods).instance_methods(false)
       klass
     end
 

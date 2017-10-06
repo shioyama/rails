@@ -310,6 +310,10 @@ module ActiveModel
           ancestor.undefine_attribute_methods if ancestor.is_a? attribute_method_matcher_class
         end
       end
+
+      def instance_method_already_implemented?(method_name)
+        method_defined?(method_name)
+      end
     end
   end
 end

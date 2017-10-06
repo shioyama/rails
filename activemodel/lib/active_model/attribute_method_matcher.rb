@@ -32,13 +32,19 @@ module ActiveModel
 
     def define_attribute_method(attr_name)
       name = method_name(attr_name)
-      unless instance_method_already_implemented?(name)
-        define_proxy_call true, name, @method_missing_target, attr_name.to_s
+      unless method_defined?(name)
+        generate_method = "define_method_#{method_missing_target}"
+
+        if respond_to?(generate_method, true)
+          send(generate_method, attr_name.to_s)
+        else
+          define_proxy_call true, name, method_missing_target, attr_name.to_s
+        end
       end
     end
 
     def undefine_attribute_methods
-      (instance_methods - [:method_missing]).each(&method(:undef_method))
+      (instance_methods - [:respond_to?, :method_missing]).each(&method(:undef_method))
     end
 
     def alias_attribute(new_name, old_name)
@@ -53,22 +59,31 @@ module ActiveModel
       end
     end
 
-    def instance_method_already_implemented?(method_name)
-      method_defined?(method_name)
-    end
-
     private
 
     def define_method_missing
       matcher = self
 
       define_method :method_missing do |method_name, *arguments, &method_block|
-        if (match = matcher.match(method_name)) &&
+        if (match = matcher.match(method_name.to_s)) &&
+            method_name != :attributes &&
             attribute_method?(match.attr_name) &&
-            !respond_to?(method_name, true)
+            !respond_to_without_attributes?(method_name, true)
           attribute_missing(match, *arguments, &method_block)
         else
           super(method_name, *arguments, &method_block)
+        end
+      end
+
+      define_method :respond_to? do |method_name, include_private_methods = false|
+        if super(method_name, include_private_methods)
+          true
+        elsif !include_private_methods && super(method_name, true)
+          false
+        else
+          (match = matcher.match(method_name.to_s)) &&
+            (method_name != :attributes) &&
+            attribute_method?(match.attr_name)
         end
       end
     end
