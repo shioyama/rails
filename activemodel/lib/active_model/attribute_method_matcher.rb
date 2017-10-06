@@ -45,6 +45,7 @@ module ActiveModel
 
     def undefine_attribute_methods
       (instance_methods - [:respond_to?, :method_missing]).each(&method(:undef_method))
+      matchers_cache.clear
     end
 
     def alias_attribute(new_name, old_name)

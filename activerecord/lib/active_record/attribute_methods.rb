@@ -7,6 +7,7 @@ module ActiveRecord
     include ActiveModel::AttributeMethods
 
     included do
+      include attribute_method_matcher_class.new
       include Read
       include Write
       include BeforeTypeCast
@@ -38,7 +39,6 @@ module ActiveRecord
       # Generates all the attribute related methods for columns in the database
       # accessors, mutators and query methods.
       def define_attribute_methods # :nodoc:
-        #superclass.define_attribute_methods unless self == base_class
         super(attribute_names)
       end
 

@@ -65,7 +65,7 @@ module ActiveModel
 
     included do
       class_attribute :attribute_aliases, instance_writer: false, default: {}
-      include AttributeMethodMatcher.new
+      include attribute_method_matcher_class.new
     end
 
     module ClassMethods

@@ -19,7 +19,6 @@ module ActiveRecord
       # attribute methods.
       synchronize do
         return false if @attribute_methods_generated
-        #model_class.superclass.define_attribute_methods unless model_class == model_class.base_class
         super(*attr_names)
         @attribute_methods_generated = true
       end
