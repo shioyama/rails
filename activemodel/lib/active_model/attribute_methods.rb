@@ -65,7 +65,8 @@ module ActiveModel
 
     included do
       class_attribute :attribute_aliases, instance_writer: false, default: {}
-      include attribute_method_matcher_class.new
+      include (matcher = AttributeMethodMatcher.new)
+      class_attribute :attribute_method_matchers, instance_writer: false, default: [ matcher ]
     end
 
     module ClassMethods
@@ -105,7 +106,9 @@ module ActiveModel
       #   person.clear_name
       #   person.name          # => nil
       def attribute_method_prefix(*prefixes)
-        prefixes.each { |prefix| include attribute_method_matcher_class.new prefix: prefix }
+        self.attribute_method_matchers += prefixes.map! do |prefix|
+          attribute_method_matcher_class.new(prefix: prefix).tap(&method(:include))
+        end
         undefine_attribute_methods
       end
 
@@ -140,7 +143,9 @@ module ActiveModel
       #   person.name          # => "Bob"
       #   person.name_short?   # => true
       def attribute_method_suffix(*suffixes)
-        suffixes.each { |suffix| include attribute_method_matcher_class.new suffix: suffix }
+        self.attribute_method_matchers += suffixes.map! do |suffix|
+          attribute_method_matcher_class.new(suffix: suffix).tap(&method(:include))
+        end
         undefine_attribute_methods
       end
 
@@ -176,7 +181,9 @@ module ActiveModel
       #   person.reset_name_to_default!
       #   person.name                         # => 'Default Name'
       def attribute_method_affix(*affixes)
-        affixes.each { |affix| include attribute_method_matcher_class.new prefix: affix[:prefix], suffix: affix[:suffix] }
+        self.attribute_method_matchers += affixes.map! do |affix|
+          attribute_method_matcher_class.new(prefix: affix[:prefix], suffix: affix[:suffix]).tap(&method(:include))
+        end
         undefine_attribute_methods
       end
 
@@ -206,9 +213,7 @@ module ActiveModel
       #   person.nickname_short? # => true
       def alias_attribute(new_name, old_name)
         self.attribute_aliases = attribute_aliases.merge(new_name.to_s => old_name.to_s)
-        ancestors.each do |ancestor|
-          ancestor.alias_attribute(new_name, old_name) if ancestor.is_a?(attribute_method_matcher_class)
-        end
+        attribute_method_matchers.each { |matcher| matcher.alias_attribute(new_name, old_name) }
       end
 
       # Is +new_name+ an alias?
@@ -246,8 +251,8 @@ module ActiveModel
       #     end
       #   end
       def define_attribute_methods(*attr_names)
-        ancestors.each do |ancestor|
-          ancestor.define_attribute_methods(*(attr_names.flatten)) if ancestor.is_a? attribute_method_matcher_class
+        attribute_method_matchers.each do |matcher|
+          matcher.define_attribute_methods(*(attr_names.flatten))
         end
       end
 
@@ -306,8 +311,8 @@ module ActiveModel
       #
       #   person.name_short? # => NoMethodError
       def undefine_attribute_methods
-        ancestors.each do |ancestor|
-          ancestor.undefine_attribute_methods if ancestor.is_a? attribute_method_matcher_class
+        attribute_method_matchers.each do |matcher|
+          matcher.undefine_attribute_methods
         end
       end
 
