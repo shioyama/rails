@@ -7,7 +7,7 @@ module ActiveRecord
     include ActiveModel::AttributeMethods
 
     included do
-      include attribute_method_matcher_class.new
+      self.attribute_method_matchers = [ attribute_method_matcher_class.new ]
       include Read
       include Write
       include BeforeTypeCast
@@ -36,10 +36,23 @@ module ActiveRecord
         ActiveRecord::AttributeMethodMatcher
       end
 
+      def inherited(child_class) #:nodoc:
+        if self == Base
+          child_class.attribute_method_matchers = attribute_method_matchers.map do |matcher|
+            matcher.dup.tap { |mod| child_class.include(mod) }
+          end
+        end
+        super
+      end
+
       # Generates all the attribute related methods for columns in the database
       # accessors, mutators and query methods.
       def define_attribute_methods # :nodoc:
         super(attribute_names)
+      end
+
+      def apply_matcher(matcher)
+        super unless self == Base
       end
 
       # Raises an ActiveRecord::DangerousAttributeError exception when an
