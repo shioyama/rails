@@ -65,7 +65,7 @@ module ActiveModel
 
     included do
       class_attribute :attribute_aliases, instance_writer: false, default: {}
-      include (matcher = AttributeMethodMatcher.new)
+      matcher = attribute_method_matcher_class.new.tap { |m| m.apply(self) }
       class_attribute :attribute_method_matchers, instance_writer: false, default: [ matcher ]
     end
 
@@ -107,7 +107,7 @@ module ActiveModel
       #   person.name          # => nil
       def attribute_method_prefix(*prefixes)
         self.attribute_method_matchers += prefixes.map! do |prefix|
-          attribute_method_matcher_class.new(prefix: prefix).tap(&method(:apply_matcher))
+          attribute_method_matcher_class.new(prefix: prefix).tap { |m| m.apply(self) }
         end
         undefine_attribute_methods
       end
@@ -144,7 +144,7 @@ module ActiveModel
       #   person.name_short?   # => true
       def attribute_method_suffix(*suffixes)
         self.attribute_method_matchers += suffixes.map! do |suffix|
-          attribute_method_matcher_class.new(suffix: suffix).tap(&method(:apply_matcher))
+          attribute_method_matcher_class.new(suffix: suffix).tap { |m| m.apply(self) }
         end
         undefine_attribute_methods
       end
@@ -182,7 +182,7 @@ module ActiveModel
       #   person.name                         # => 'Default Name'
       def attribute_method_affix(*affixes)
         self.attribute_method_matchers += affixes.map! do |affix|
-          attribute_method_matcher_class.new(prefix: affix[:prefix], suffix: affix[:suffix]).tap(&method(:apply_matcher))
+          attribute_method_matcher_class.new(prefix: affix[:prefix], suffix: affix[:suffix]).tap { |m| m.apply(self) }
         end
         undefine_attribute_methods
       end
@@ -318,10 +318,6 @@ module ActiveModel
 
       def instance_method_already_implemented?(method_name)
         method_defined?(method_name)
-      end
-
-      def apply_matcher(matcher)
-        include matcher
       end
     end
   end

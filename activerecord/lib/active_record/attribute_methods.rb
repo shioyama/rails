@@ -51,10 +51,6 @@ module ActiveRecord
         super(attribute_names)
       end
 
-      def apply_matcher(matcher)
-        super unless self == Base
-      end
-
       # Raises an ActiveRecord::DangerousAttributeError exception when an
       # \Active \Record method is defined in the model, otherwise +false+.
       #

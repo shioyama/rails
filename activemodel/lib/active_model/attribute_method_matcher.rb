@@ -60,6 +60,10 @@ module ActiveModel
       end
     end
 
+    def apply(klass)
+      klass.include self
+    end
+
     private
 
     def define_method_missing

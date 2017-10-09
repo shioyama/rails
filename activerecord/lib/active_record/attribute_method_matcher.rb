@@ -31,6 +31,10 @@ module ActiveRecord
       end
     end
 
+    def apply(klass)
+      super unless klass == Base
+    end
+
     private
 
     # We want to generate the methods via module_eval rather than
