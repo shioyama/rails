@@ -56,12 +56,11 @@ module ActiveRecord
       temp_method = "__temp__#{safe_name}"
 
       ActiveRecord::AttributeMethods::AttrNames.set_name_cache safe_name, name
-      #sync_with_transaction_state = ""
 
       module_eval <<-STR, __FILE__, __LINE__ + 1
         def #{temp_method}
-          #sync_with_transaction_state if #{name.inspect} == self.class.primary_key
           name = ::ActiveRecord::AttributeMethods::AttrNames::ATTR_#{safe_name}
+          sync_with_transaction_state if name == self.class.primary_key
           _read_attribute(name) { |n| missing_attribute(n, caller) }
         end
       STR
@@ -73,13 +72,11 @@ module ActiveRecord
     def define_method_attribute=(name)
       safe_name = name.unpack("h*".freeze).first
       ActiveRecord::AttributeMethods::AttrNames.set_name_cache safe_name, name
-      #sync_with_transaction_state = "sync_with_transaction_state" if name == model_class.primary_key
-      #sync_with_transaction_state = ""
 
       module_eval <<-STR, __FILE__, __LINE__ + 1
         def __temp__#{safe_name}=(value)
           name = ::ActiveRecord::AttributeMethods::AttrNames::ATTR_#{safe_name}
-          #sync_with_transaction_state if #{name.inspect} == self.class.primary_key
+          sync_with_transaction_state if name == self.class.primary_key
           _write_attribute(name, value)
         end
         alias_method #{(name + '=').inspect}, :__temp__#{safe_name}=
