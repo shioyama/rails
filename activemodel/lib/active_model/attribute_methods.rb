@@ -316,6 +316,8 @@ module ActiveModel
         end
       end
 
+      private
+
       def instance_method_already_implemented?(method_name)
         method_defined?(method_name)
       end
