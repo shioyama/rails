@@ -32,7 +32,7 @@ module ActiveModel
 
     def define_attribute_method(attr_name)
       name = method_name(attr_name)
-      unless method_defined?(name)
+      unless instance_method_already_implemented?(name)
         generate_method = "define_method_#{method_missing_target}"
 
         if respond_to?(generate_method, true)
@@ -121,6 +121,10 @@ module ActiveModel
           #{target}
         end
       RUBY
+    end
+
+    def instance_method_already_implemented?(method_name)
+      method_defined?(method_name)
     end
 
     module AttributeMissingMethods

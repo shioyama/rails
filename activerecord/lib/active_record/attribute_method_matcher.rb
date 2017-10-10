@@ -11,6 +11,11 @@ module ActiveRecord
       @attribute_methods_generated = false
     end
 
+    def included(model_class)
+      super
+      @model_class = model_class
+    end
+
     # Generates all the attribute related methods for columns in the database
     # accessors, mutators and query methods.
     def define_attribute_methods(*attr_names)
@@ -86,6 +91,10 @@ module ActiveRecord
         alias_method #{(name + '=').inspect}, :__temp__#{safe_name}=
         undef_method :__temp__#{safe_name}=
       STR
+    end
+
+    def instance_method_already_implemented?(method_name)
+      @model_class.instance_method_already_implemented?(method_name)
     end
   end
 end
