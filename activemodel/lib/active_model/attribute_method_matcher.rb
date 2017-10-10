@@ -13,7 +13,7 @@ module ActiveModel
     def initialize(options = {})
       @prefix, @suffix = options.fetch(:prefix, ""), options.fetch(:suffix, "")
       @regex = /^(?:#{Regexp.escape(@prefix)})(.*)(?:#{Regexp.escape(@suffix)})$/
-        @method_missing_target = "#{@prefix}attribute#{@suffix}"
+      @method_missing_target = "#{@prefix}attribute#{@suffix}"
       @method_name = "#{prefix}%s#{suffix}"
       define_method_missing
     end
