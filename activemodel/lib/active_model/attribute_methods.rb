@@ -319,7 +319,7 @@ module ActiveModel
       private
 
       def instance_method_already_implemented?(method_name)
-        method_defined?(method_name)
+        attribute_method_matchers.any? { |matcher| matcher.method_defined?(method_name) }
       end
     end
   end
