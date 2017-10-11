@@ -88,7 +88,7 @@ module ActiveModel
         else
           (match = matcher.match(method_name.to_s)) &&
             (method_name != :attributes) &&
-            attribute_method?(match.attr_name)
+            attribute_method?(match.attr_name) || false
         end
       end
     end
