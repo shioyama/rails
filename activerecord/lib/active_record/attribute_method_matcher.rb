@@ -40,6 +40,10 @@ module ActiveRecord
       super unless klass == Base
     end
 
+    def plain?
+      prefix.empty? && suffix.empty?
+    end
+
     private
 
     # We want to generate the methods via module_eval rather than

@@ -38,9 +38,10 @@ module ActiveRecord
 
       def inherited(child_class) #:nodoc:
         if self == Base
-          child_class.attribute_method_matchers = attribute_method_matchers.map do |matcher|
-            matcher.dup.tap { |mod| child_class.include(mod) }
-          end
+          child_class.attribute_method_matchers =
+            attribute_method_matchers.partition(&:plain?).flatten(1).map do |matcher|
+              matcher.dup.tap { |mod| child_class.include(mod) }
+            end
         end
         super
       end

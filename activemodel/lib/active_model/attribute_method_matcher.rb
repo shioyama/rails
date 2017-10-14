@@ -7,7 +7,7 @@ module ActiveModel
     NAME_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?=]?\z/
     CALL_COMPILABLE_REGEXP = /\A[a-zA-Z_]\w*[!?]?\z/
 
-    attr_reader :prefix, :suffix, :method_missing_target
+    attr_reader :prefix, :suffix, :method_missing_target, :method_names
     AttributeMethodMatch = Struct.new(:target, :attr_name, :method_name)
 
     def initialize(options = {})
@@ -15,6 +15,7 @@ module ActiveModel
       @regex = /^(?:#{Regexp.escape(@prefix)})(.*)(?:#{Regexp.escape(@suffix)})$/
       @method_missing_target = "#{@prefix}attribute#{@suffix}"
       @method_name = "#{prefix}%s#{suffix}"
+      @method_names = []
       define_method_missing
     end
 
@@ -38,13 +39,15 @@ module ActiveModel
         if respond_to?(generate_method, true)
           send(generate_method, attr_name.to_s)
         else
+          method_names << name.to_sym
           define_proxy_call true, name, method_missing_target, attr_name.to_s
         end
       end
     end
 
     def undefine_attribute_methods
-      (instance_methods - [:respond_to?, :method_missing]).each(&method(:undef_method))
+      (method_names & instance_methods(false)).each(&method(:undef_method))
+      method_names.clear
       matchers_cache.clear
     end
 
