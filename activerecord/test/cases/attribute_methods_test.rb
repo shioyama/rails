@@ -1002,7 +1002,9 @@ class AttributeMethodsTest < ActiveRecord::TestCase
         class_eval(&block)
       end
 
-#      assert_empty klass.send(:generated_attribute_methods).instance_methods(false)
+      klass.attribute_method_matchers.each do |matcher|
+        assert_empty matcher.instance_methods - [:respond_to?, :method_missing]
+      end
       klass
     end
 
