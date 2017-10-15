@@ -31,7 +31,7 @@ module ActiveRecord
 
     def undefine_attribute_methods # :nodoc:
       synchronize do
-        super if defined?(@attribute_methods_generated) && @attribute_methods_generated
+        super if @attribute_methods_generated
         @attribute_methods_generated = false
       end
     end
@@ -98,7 +98,7 @@ module ActiveRecord
     end
 
     def instance_method_already_implemented?(method_name)
-      @model_class.instance_method_already_implemented?(method_name)
+      @model_class && @model_class.instance_method_already_implemented?(method_name)
     end
   end
 end
