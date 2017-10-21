@@ -49,7 +49,14 @@ module ActiveRecord
       # Generates all the attribute related methods for columns in the database
       # accessors, mutators and query methods.
       def define_attribute_methods # :nodoc:
+        return false if defined?(@attribute_methods_generated) && @attribute_methods_generated
         super(attribute_names)
+        @attribute_methods_generated = true
+      end
+
+      def undefine_attribute_methods # :nodoc:
+        super if defined?(@attribute_methods_generated) && @attribute_methods_generated
+        @attribute_methods_generated = false
       end
 
       # Raises an ActiveRecord::DangerousAttributeError exception when an
