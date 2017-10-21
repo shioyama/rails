@@ -3,6 +3,8 @@
 module ActiveRecord
   module AttributeMethods
     module Read
+      extend ActiveSupport::Concern
+
       # Returns the value of the attribute identified by <tt>attr_name</tt> after
       # it has been typecast (for example, "2004-12-12" in a date column is cast
       # to a date object, like Date.new(2004, 12, 12)).
