@@ -43,6 +43,7 @@ module ActiveModel
           define_proxy_call true, name, method_missing_target, attr_name.to_s
         end
       end
+      matchers_cache.clear
     end
 
     def undefine_attribute_methods
