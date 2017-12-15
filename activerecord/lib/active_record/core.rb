@@ -333,6 +333,7 @@ module ActiveRecord
       @new_record = coder["new_record"]
 
       self.class.define_attribute_methods
+      define_attribute_methods
 
       yield self if block_given?
 

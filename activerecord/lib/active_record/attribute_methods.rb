@@ -441,6 +441,10 @@ module ActiveRecord
 
     private
 
+      def define_attribute_methods
+        (attribute_names - self.class.attribute_names).each { |name| singleton_class.define_attribute_method(name) }
+      end
+
       def arel_attributes_with_values_for_create(attribute_names)
         arel_attributes_with_values(attributes_for_create(attribute_names))
       end

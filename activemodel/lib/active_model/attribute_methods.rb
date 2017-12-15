@@ -412,25 +412,6 @@ module ActiveModel
         end
     end
 
-    # Allows access to the object attributes, which are held in the hash
-    # returned by <tt>attributes</tt>, as though they were first-class
-    # methods. So a +Person+ class with a +name+ attribute can for example use
-    # <tt>Person#name</tt> and <tt>Person#name=</tt> and never directly use
-    # the attributes hash -- except for multiple assignments with
-    # <tt>ActiveRecord::Base#attributes=</tt>.
-    #
-    # It's also possible to instantiate related objects, so a <tt>Client</tt>
-    # class belonging to the +clients+ table with a +master_id+ foreign key
-    # can instantiate master through <tt>Client#master</tt>.
-    def method_missing(method, *args, &block)
-      if respond_to_without_attributes?(method, true)
-        super
-      else
-        match = matched_attribute_method(method.to_s)
-        match ? attribute_missing(match, *args, &block) : super
-      end
-    end
-
     # +attribute_missing+ is like +method_missing+, but for attributes. When
     # +method_missing+ is called we check to see if there is a matching
     # attribute method. If so, we tell +attribute_missing+ to dispatch the
@@ -439,21 +420,7 @@ module ActiveModel
       __send__(match.target, match.attr_name, *args, &block)
     end
 
-    # A +Person+ instance with a +name+ attribute can ask
-    # <tt>person.respond_to?(:name)</tt>, <tt>person.respond_to?(:name=)</tt>,
-    # and <tt>person.respond_to?(:name?)</tt> which will all return +true+.
     alias :respond_to_without_attributes? :respond_to?
-    def respond_to?(method, include_private_methods = false)
-      if super
-        true
-      elsif !include_private_methods && super(method, true)
-        # If we're here then we haven't found among non-private methods
-        # but found among all methods. Which means that the given method is private.
-        false
-      else
-        !matched_attribute_method(method.to_s).nil?
-      end
-    end
 
     private
       def attribute_method?(attr_name)
