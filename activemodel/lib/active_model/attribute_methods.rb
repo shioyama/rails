@@ -295,7 +295,6 @@ module ActiveModel
             end
           end
         end
-        attribute_method_matchers_cache.clear
       end
 
       # Removes all the previously dynamically defined methods from the class.
@@ -325,7 +324,6 @@ module ActiveModel
         generated_attribute_methods.module_eval do
           instance_methods.each { |m| undef_method(m) }
         end
-        attribute_method_matchers_cache.clear
       end
 
       private
@@ -335,28 +333,6 @@ module ActiveModel
 
         def instance_method_already_implemented?(method_name)
           generated_attribute_methods.method_defined?(method_name)
-        end
-
-        # The methods +method_missing+ and +respond_to?+ of this module are
-        # invoked often in a typical rails, both of which invoke the method
-        # +matched_attribute_method+. The latter method iterates through an
-        # array doing regular expression matches, which results in a lot of
-        # object creations. Most of the time it returns a +nil+ match. As the
-        # match result is always the same given a +method_name+, this cache is
-        # used to alleviate the GC, which ultimately also speeds up the app
-        # significantly (in our case our test suite finishes 10% faster with
-        # this cache).
-        def attribute_method_matchers_cache
-          @attribute_method_matchers_cache ||= Concurrent::Map.new(initial_capacity: 4)
-        end
-
-        def attribute_method_matchers_matching(method_name)
-          attribute_method_matchers_cache.compute_if_absent(method_name) do
-            # Must try to match prefixes/suffixes first, or else the matcher with no prefix/suffix
-            # will match every time.
-            matchers = attribute_method_matchers.partition(&:plain?).reverse.flatten(1)
-            matchers.map { |matcher| matcher.match(method_name) }.compact
-          end
         end
 
         # Define a method `name` in `mod` that dispatches to `send`
@@ -387,27 +363,14 @@ module ActiveModel
         class AttributeMethodMatcher #:nodoc:
           attr_reader :prefix, :suffix, :target
 
-          AttributeMethodMatch = Struct.new(:target, :attr_name)
-
           def initialize(options = {})
             @prefix, @suffix = options.fetch(:prefix, ""), options.fetch(:suffix, "")
-            @regex = /^(?:#{Regexp.escape(@prefix)})(.*)(?:#{Regexp.escape(@suffix)})$/
             @target = "#{@prefix}attribute#{@suffix}"
             @method_name = "#{prefix}%s#{suffix}"
           end
 
-          def match(method_name)
-            if @regex =~ method_name
-              AttributeMethodMatch.new(target, $1)
-            end
-          end
-
           def method_name(attr_name)
             @method_name % attr_name
-          end
-
-          def plain?
-            prefix.empty? && suffix.empty?
           end
         end
     end
@@ -426,17 +389,9 @@ module ActiveModel
       if respond_to_without_attributes?(method, true)
         super
       else
-        match = matched_attribute_method(method.to_s)
-        match ? attribute_missing(match, *args, &block) : super
+        attribute_method?(method.to_s) ?
+          __send__('attribute', method.to_s, *args, &block) : super
       end
-    end
-
-    # +attribute_missing+ is like +method_missing+, but for attributes. When
-    # +method_missing+ is called we check to see if there is a matching
-    # attribute method. If so, we tell +attribute_missing+ to dispatch the
-    # attribute. This method can be overloaded to customize the behavior.
-    def attribute_missing(match, *args, &block)
-      __send__(match.target, match.attr_name, *args, &block)
     end
 
     # A +Person+ instance with a +name+ attribute can ask
@@ -451,20 +406,13 @@ module ActiveModel
         # but found among all methods. Which means that the given method is private.
         false
       else
-        !matched_attribute_method(method.to_s).nil?
+        attribute_method?(method.to_s)
       end
     end
 
     private
       def attribute_method?(attr_name)
         respond_to_without_attributes?(:attributes) && attributes.include?(attr_name)
-      end
-
-      # Returns a struct representing the matching attribute method.
-      # The struct's attributes are prefix, base and suffix.
-      def matched_attribute_method(method_name)
-        matches = self.class.send(:attribute_method_matchers_matching, method_name)
-        matches.detect { |match| attribute_method?(match.attr_name) }
       end
 
       def missing_attribute(attr_name, stack)
